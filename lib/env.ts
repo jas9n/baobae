@@ -21,7 +21,11 @@ export function getSupabasePublishableKey() {
 }
 
 export function getSupabaseServiceRoleKey() {
-  return getEnv("SUPABASE_SERVICE_ROLE_KEY");
+  return (
+    process.env.SUPABASE_SECRET_KEY ??
+    process.env.SUPABASE_SERVICE_ROLE_KEY ??
+    getEnv("SUPABASE_SECRET_KEY")
+  );
 }
 
 export function getAdminPassword() {

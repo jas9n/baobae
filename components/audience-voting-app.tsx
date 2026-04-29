@@ -237,15 +237,25 @@ export function AudienceVotingApp() {
       <div className="page-background" />
       <section className="glass-panel audience-panel audience-room">
         <div className="panel-header">
-          <div>
-            <div className="brand-chip">Baobae Live</div>
+          <div className="room-header-stack">
+            <div className="room-topbar">
+              <div className="brand-chip">Baobae 2026</div>
+              {user ? (
+                <button
+                  className="ghost-button room-logout"
+                  onClick={handleLogout}
+                  type="button"
+                >
+                  Sign out
+                </button>
+              ) : null}
+            </div>
             <h1 className="room-title">Voting Room</h1>
             <p className="room-subtitle">{eventData?.state.subheadline ?? copy.description}</p>
             <div className="room-meta">
               <span className={`status-pill status-${currentPhase}`}>{copy.title}</span>
               {eventData ? (
                 <div className="event-meta">
-                  <strong>{eventData.state.event_name}</strong>
                   <span>Round {eventData.state.phase_number}</span>
                 </div>
               ) : (
@@ -253,11 +263,6 @@ export function AudienceVotingApp() {
               )}
             </div>
           </div>
-          {user ? (
-            <button className="ghost-button" onClick={handleLogout} type="button">
-              Sign out
-            </button>
-          ) : null}
         </div>
 
         {!isReady ? (
@@ -296,43 +301,73 @@ export function AudienceVotingApp() {
             <span className="muted-text">{user.email}</span>
           </div>
         ) : (
-          <>
-            <div className="instruction-banner">
-              <span>{copy.description}</span>
-              <strong>{copy.action}</strong>
+          activeContestants.length === 0 ? (
+            <div className="empty-state">
+              <div className="pulse-dot" />
+              <p>Production has not opened any contestants for this round yet.</p>
+              <span className="muted-text">Stay on this page for live updates.</span>
             </div>
-            <div className="contestant-grid voting-grid">
-              {activeContestants.map((contestant) => {
-                const isSelected = contestant.id === selectedContestantId;
+          ) : (
+            <>
+              <div className="instruction-banner vote-instruction">
+                <div className="vote-instruction-copy">
+                  <strong>Choose one contestant</strong>
+                  <span>{copy.description}</span>
+                </div>
+                <span className="vote-count-badge">
+                  {activeContestants.length} on the ballot
+                </span>
+              </div>
+              <div className="contestant-grid voting-grid">
+                {activeContestants.map((contestant) => {
+                  const isSelected = contestant.id === selectedContestantId;
 
-                return (
-                  <button
-                    key={contestant.id}
-                    type="button"
-                    className={`contestant-card ${isSelected ? "selected" : ""}`}
-                    onClick={() => setSelectedContestantId(contestant.id)}
-                  >
-                    <Avatar contestant={contestant} />
-                    <div className="contestant-copy">
-                      <h3>{contestant.name}</h3>
-                      <p>{contestant.bio ?? "No bio added yet."}</p>
-                    </div>
-                    <span className="selection-indicator">
-                      {isSelected ? "Selected" : "Tap to choose"}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-            <button
-              className="primary-button wide-button"
-              type="button"
-              disabled={!selectedContestantId || isSubmitting}
-              onClick={handleVoteSubmit}
-            >
-              {isSubmitting ? "Submitting..." : copy.action}
-            </button>
-          </>
+                  return (
+                    <button
+                      key={contestant.id}
+                      type="button"
+                      className={`contestant-card ${isSelected ? "selected" : ""}`}
+                      onClick={() => setSelectedContestantId(contestant.id)}
+                    >
+                      <Avatar contestant={contestant} />
+                      <div className="contestant-copy">
+                        <div className="contestant-name-row">
+                          <h3>{contestant.name}</h3>
+                          <span className="choice-dot" aria-hidden="true" />
+                        </div>
+                        <p>{contestant.bio ?? "No bio added yet."}</p>
+                        <span className="selection-indicator">
+                          {isSelected ? "Selected" : "Tap to choose"}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="vote-submit-bar">
+                <div className="vote-submit-copy">
+                  <strong>
+                    {selectedContestant
+                      ? `${selectedContestant.name} is selected`
+                      : "Choose a contestant to continue"}
+                  </strong>
+                  <span>
+                    {selectedContestant
+                      ? "Submit once to lock in your vote for this round."
+                      : "Your vote is only counted after you press submit."}
+                  </span>
+                </div>
+                <button
+                  className="primary-button wide-button"
+                  type="button"
+                  disabled={!selectedContestantId || isSubmitting}
+                  onClick={handleVoteSubmit}
+                >
+                  {isSubmitting ? "Submitting..." : copy.action}
+                </button>
+              </div>
+            </>
+          )
         )}
 
         {statusMessage ? <p className="status-message">{statusMessage}</p> : null}
@@ -342,11 +377,22 @@ export function AudienceVotingApp() {
 }
 
 function Avatar({ contestant }: { contestant: Contestant }) {
-  if (contestant.avatar_url) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const imageSrc =
+    contestant.avatar_url ??
+    `/contestants/${encodeURIComponent(contestant.name)}.png`;
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [contestant.avatar_url, contestant.name]);
+
+  if (!imageFailed) {
     return (
-      <div
+      <img
+        alt={contestant.name}
         className="contestant-avatar has-image"
-        style={{ backgroundImage: `url(${contestant.avatar_url})` }}
+        onError={() => setImageFailed(true)}
+        src={imageSrc}
       />
     );
   }

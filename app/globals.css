@@ -88,6 +88,26 @@ main {
   margin-bottom: 20px;
 }
 
+.admin-titlebar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.admin-title-copy {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-title-copy h1 {
+  margin: 0;
+  font-family: "Trebuchet MS", "Avenir Next", sans-serif;
+  font-size: clamp(2.2rem, 6vw, 4rem);
+  line-height: 1;
+}
+
 .brand-chip,
 .status-pill,
 .toggle-pill,
@@ -101,7 +121,8 @@ main {
 .brand-chip {
   width: fit-content;
   padding: 10px 16px;
-  background: linear-gradient(120deg, rgba(255, 127, 166, 0.18), rgba(140, 227, 214, 0.3));
+  background: #f25f77;
+  color: #fff;
   font-weight: 700;
   letter-spacing: 0.02em;
 }
@@ -203,11 +224,36 @@ main {
   padding: 28px;
 }
 
-.panel-header {
+.room-header-stack {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+}
+
+.room-topbar {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.panel-header {
+  justify-content: flex-start;
   align-items: flex-start;
-  gap: 16px;
+  gap: 0;
   margin-bottom: 20px;
+}
+
+.room-logout {
+  flex-shrink: 0;
+  background: rgba(242, 95, 119, 0.14);
+  color: var(--danger);
+  border: 1px solid rgba(242, 95, 119, 0.24);
+}
+
+.room-logout:hover {
+  background: rgba(242, 95, 119, 0.2);
 }
 
 .room-title {
@@ -300,6 +346,29 @@ main {
   flex-wrap: wrap;
 }
 
+.vote-instruction {
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.vote-instruction-copy {
+  display: grid;
+  gap: 4px;
+  max-width: 34rem;
+}
+
+.vote-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(255, 216, 111, 0.26);
+  color: var(--ink-strong);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
 .contestant-grid {
   display: grid;
   gap: 14px;
@@ -312,11 +381,11 @@ main {
 
 .contestant-card {
   display: grid;
-  grid-template-columns: 74px 1fr;
-  gap: 14px;
-  align-items: center;
+  grid-template-columns: 112px 1fr;
+  gap: 18px;
+  align-items: start;
   width: 100%;
-  padding: 16px;
+  padding: 18px;
   border: 1px solid rgba(116, 94, 154, 0.12);
   border-radius: 24px;
   background: rgba(255, 255, 255, 0.86);
@@ -335,21 +404,30 @@ main {
   box-shadow: 0 18px 30px rgba(43, 33, 61, 0.08);
 }
 
+.contestant-card.selected {
+  background:
+    linear-gradient(135deg, rgba(255, 127, 166, 0.12), rgba(140, 227, 214, 0.1)),
+    rgba(255, 255, 255, 0.94);
+}
+
 .contestant-avatar {
-  width: 74px;
-  height: 74px;
-  border-radius: 22px;
+  width: 112px;
+  height: 128px;
+  border-radius: 28px;
   display: grid;
   place-items: center;
-  font-size: 1.8rem;
+  font-size: 2.5rem;
   font-weight: 800;
   color: white;
   background: linear-gradient(135deg, var(--sky), var(--accent));
   background-size: cover;
   background-position: center;
+  box-shadow: inset 0 -18px 30px rgba(43, 33, 61, 0.18);
 }
 
 .contestant-avatar.has-image {
+  display: block;
+  object-fit: cover;
   color: transparent;
 }
 
@@ -358,13 +436,39 @@ main {
   gap: 6px;
 }
 
+.contestant-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .contestant-copy h3 {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 1.08rem;
+}
+
+.choice-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 92, 143, 0.38);
+  background: rgba(255, 255, 255, 0.85);
+  transition:
+    background 180ms ease,
+    transform 180ms ease,
+    border-color 180ms ease;
+}
+
+.selected .choice-dot {
+  transform: scale(1.05);
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
 }
 
 .selection-indicator {
-  justify-self: start;
+  align-self: flex-start;
+  width: fit-content;
   padding: 8px 12px;
   font-size: 0.82rem;
   font-weight: 700;
@@ -375,6 +479,34 @@ main {
 .selected .selection-indicator {
   background: rgba(140, 227, 214, 0.24);
   color: var(--success);
+}
+
+.vote-submit-bar {
+  position: sticky;
+  bottom: 12px;
+  display: grid;
+  gap: 14px;
+  margin-top: 6px;
+  padding: 18px;
+  border-radius: 24px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(255, 245, 223, 0.96));
+  border: 1px solid rgba(116, 94, 154, 0.12);
+  box-shadow: 0 20px 40px rgba(43, 33, 61, 0.08);
+}
+
+.vote-submit-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.vote-submit-copy strong {
+  font-size: 1rem;
+}
+
+.vote-submit-copy span:last-child {
+  color: var(--ink-soft);
+  line-height: 1.5;
 }
 
 .login-panel,
@@ -419,7 +551,7 @@ main {
   font-weight: 600;
 }
 
-.dashboard-grid {
+.admin-grid {
   position: relative;
   z-index: 1;
   display: grid;
@@ -553,7 +685,7 @@ main {
     padding: 32px 24px 56px;
   }
 
-  .dashboard-grid {
+  .admin-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -565,8 +697,81 @@ main {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .vote-submit-bar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .vote-submit-bar .primary-button {
+    width: auto;
+    min-width: 240px;
+  }
+
   .phase-button-row {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 719px) {
+  .page-shell {
+    padding: 14px 12px 28px;
+  }
+
+  .admin-titlebar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .audience-room {
+    padding: 18px 14px calc(20px + env(safe-area-inset-bottom));
+    border-radius: 26px;
+  }
+
+  .audience-room .panel-header {
+    margin-bottom: 16px;
+  }
+
+  .room-logout {
+    margin-left: auto;
+    color: #f25f77;
+  }
+
+  .room-title {
+    font-size: 2.3rem;
+    margin-top: 10px;
+  }
+
+  .room-subtitle {
+    font-size: 0.98rem;
+  }
+
+  .instruction-banner {
+    padding: 16px;
+  }
+
+  .contestant-card {
+    grid-template-columns: 104px 1fr;
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .contestant-avatar {
+    width: 104px;
+    height: 120px;
+    border-radius: 24px;
+    font-size: 2.2rem;
+  }
+
+  .contestant-copy p {
+    font-size: 0.95rem;
+  }
+
+  .vote-submit-bar {
+    bottom: calc(10px + env(safe-area-inset-bottom));
+  }
+
+  .status-message {
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
   }
 }
 

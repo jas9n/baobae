@@ -43,7 +43,7 @@ export function AdminDashboard() {
       setEventData(data);
     } catch (error) {
       console.error(error);
-      setStatusMessage("The dashboard could not load the event state.");
+      setStatusMessage("The admin panel could not load the event state.");
     }
   }
 
@@ -69,7 +69,7 @@ export function AdminDashboard() {
       setStatusMessage(
         error instanceof Error
           ? error.message
-          : "The dashboard could not load live totals."
+          : "The admin panel could not load live totals."
       );
       if (error instanceof Error && error.message.includes("Unauthorized")) {
         setAuthMode("locked");
@@ -126,7 +126,6 @@ export function AdminDashboard() {
   }, [supabase]);
 
   usePolling(() => refreshPublicState(), 5000, true);
-
   usePolling(() => refreshAdminResults(), 1500, authMode !== "locked");
 
   const scoreboard =
@@ -287,15 +286,12 @@ export function AdminDashboard() {
   return (
     <main className="page-shell admin-shell">
       <div className="page-background admin-background" />
-      <section className="hero-card admin-hero">
-        <div className="brand-chip">Baobae Control</div>
-        <div className="hero-copy">
-          <p className="eyebrow">Production Dashboard</p>
-          <h1>Control the live vote without slowing down the show.</h1>
-          <p>
-            Switch phases, choose who appears on the audience form, monitor live
-            totals, and reset the next round in one place.
-          </p>
+      <section className="glass-panel admin-titlebar">
+        <div className="admin-title-copy">
+          <div className="brand-chip">Baobae</div>
+          <h1>
+            Round {eventData?.state.phase_number ?? 1}
+          </h1>
         </div>
         <div className="hero-status">
           <span className={`status-pill status-${eventData?.state.phase_mode ?? "closed"}`}>
@@ -310,7 +306,7 @@ export function AdminDashboard() {
         </div>
       </section>
 
-      <section className="dashboard-grid">
+      <section className="admin-grid">
         <article className="glass-panel">
           <div className="panel-header">
             <div>
@@ -323,7 +319,7 @@ export function AdminDashboard() {
             </div>
             {authMode === "password" ? (
               <button className="ghost-button" type="button" onClick={handlePasswordLogout}>
-                Lock dashboard
+                Lock panel
               </button>
             ) : authMode === "google" ? (
               <button className="ghost-button" type="button" onClick={handleGoogleLogout}>
@@ -362,11 +358,69 @@ export function AdminDashboard() {
           ) : (
             <div className="empty-state compact-state">
               <div className="pulse-dot success-dot" />
-              <p>The production dashboard is unlocked and polling live data.</p>
+              <p>The admin panel is unlocked and ready for live control.</p>
             </div>
           )}
 
           {statusMessage ? <p className="status-message">{statusMessage}</p> : null}
+        </article>
+
+        <article className="glass-panel">
+          <div className="panel-header">
+            <div>
+              <p className="eyebrow">Live Results</p>
+              <h2>Track the crowd in real time</h2>
+              <p>
+                The top card highlights who is currently leading the audience vote.
+              </p>
+            </div>
+          </div>
+
+          {authMode === "locked" ? (
+            <div className="empty-state compact-state">
+              <div className="pulse-dot" />
+              <p>Unlock the panel to load live vote totals.</p>
+            </div>
+          ) : liveLeader ? (
+            <>
+              <div className="leader-card">
+                <span className="eyebrow">
+                  {eventData?.state.phase_mode === "revival"
+                    ? "Leading Revival"
+                    : "Most Votes"}
+                </span>
+                <h3>{liveLeader.contestant.name}</h3>
+                <p>{liveLeader.votes} votes so far</p>
+              </div>
+              <div className="scoreboard">
+                {scoreboard.map(({ contestant, votes }) => (
+                  <div key={contestant.id} className="score-row">
+                    <div className="score-copy">
+                      <strong>{contestant.name}</strong>
+                      <span>{votes} votes</span>
+                    </div>
+                    <div className="score-bar-track">
+                      <div
+                        className="score-bar-fill"
+                        style={{
+                          width: `${
+                            votes === 0 || !liveLeader
+                              ? 0
+                              : Math.max(10, (votes / Math.max(liveLeader.votes, 1)) * 100)
+                          }%`
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="empty-state compact-state">
+              <div className="pulse-dot" />
+              <p>No votes have landed in the current round yet.</p>
+            </div>
+          )}
         </article>
 
         <article className="glass-panel">
@@ -438,64 +492,6 @@ export function AdminDashboard() {
               />
             )) ?? <p className="muted-text">Loading contestants...</p>}
           </div>
-        </article>
-
-        <article className="glass-panel">
-          <div className="panel-header">
-            <div>
-              <p className="eyebrow">Live Results</p>
-              <h2>Track the crowd in real time</h2>
-              <p>
-                The top card highlights who is currently leading the audience vote.
-              </p>
-            </div>
-          </div>
-
-          {authMode === "locked" ? (
-            <div className="empty-state compact-state">
-              <div className="pulse-dot" />
-              <p>Unlock the dashboard to load live vote totals.</p>
-            </div>
-          ) : liveLeader ? (
-            <>
-              <div className="leader-card">
-                <span className="eyebrow">
-                  {eventData?.state.phase_mode === "revival"
-                    ? "Leading Revival"
-                    : "Most Votes"}
-                </span>
-                <h3>{liveLeader.contestant.name}</h3>
-                <p>{liveLeader.votes} votes so far</p>
-              </div>
-              <div className="scoreboard">
-                {scoreboard.map(({ contestant, votes }) => (
-                  <div key={contestant.id} className="score-row">
-                    <div className="score-copy">
-                      <strong>{contestant.name}</strong>
-                      <span>{votes} votes</span>
-                    </div>
-                    <div className="score-bar-track">
-                      <div
-                        className="score-bar-fill"
-                        style={{
-                          width: `${
-                            votes === 0 || !liveLeader
-                              ? 0
-                              : Math.max(10, (votes / Math.max(liveLeader.votes, 1)) * 100)
-                          }%`
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          ) : (
-            <div className="empty-state compact-state">
-              <div className="pulse-dot" />
-              <p>No votes have landed in the current round yet.</p>
-            </div>
-          )}
         </article>
 
         <article className="glass-panel">

@@ -1,8 +1,11 @@
 import type { AdminResultsResponse, AppState, Contestant, VoteTotal } from "@/lib/types";
-import { createAdminSupabaseServerClient } from "@/lib/supabase-server";
+import {
+  createAdminSupabaseServerClient,
+  createPublicSupabaseServerClient
+} from "@/lib/supabase-server";
 
 export async function fetchPublicState() {
-  const supabase = createAdminSupabaseServerClient();
+  const supabase = createPublicSupabaseServerClient();
 
   const [{ data: state, error: stateError }, { data: contestants, error: contestantsError }] =
     await Promise.all([
