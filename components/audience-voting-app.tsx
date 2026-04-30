@@ -155,9 +155,6 @@ export function AudienceVotingApp() {
 
   usePolling(() => refreshEventState(), 5000, isReady);
 
-  const activeContestants =
-    eventData?.contestants.filter((contestant) => contestant.is_selectable) ?? [];
-
   const selectedContestant =
     eventData?.contestants.find(
       (contestant) =>
@@ -166,6 +163,18 @@ export function AudienceVotingApp() {
 
   const currentPhase = eventData?.state.phase_mode ?? "closed";
   const copy = phaseCopy[currentPhase];
+  const activeContestants =
+    eventData?.contestants.filter((contestant) => {
+      if (currentPhase === "revival") {
+        return contestant.is_eliminated;
+      }
+
+      if (currentPhase === "elimination") {
+        return contestant.is_selectable && !contestant.is_eliminated;
+      }
+
+      return false;
+    }) ?? [];
 
   async function handleGoogleSignIn() {
     setStatusMessage(null);

@@ -33,26 +33,19 @@ export async function POST(request: Request) {
 
     const nextPhaseNumber = currentState.phase_number + 1;
 
-    const [{ error: stateUpdateError }, { error: contestantResetError }] =
-      await Promise.all([
-        supabase
-          .from("app_state")
-          .update({
-            phase_number: nextPhaseNumber,
-            phase_mode: "closed",
-            headline: `Round ${nextPhaseNumber} is standing by`,
-            subheadline: "Production can now choose the next live vote.",
-            updated_at: new Date().toISOString()
-          })
-          .eq("id", 1),
-        supabase
-          .from("contestants")
-          .update({ is_selectable: false })
-          .gte("display_order", 0)
-      ]);
+    const { error: stateUpdateError } = await supabase
+      .from("app_state")
+      .update({
+        phase_number: nextPhaseNumber,
+        phase_mode: "closed",
+        headline: `Round ${nextPhaseNumber} is standing by`,
+        subheadline: "Production can now choose the next live vote.",
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", 1);
 
-    if (stateUpdateError || contestantResetError) {
-      console.error("Round reset failed", stateUpdateError ?? contestantResetError);
+    if (stateUpdateError) {
+      console.error("Round reset failed", stateUpdateError);
       return NextResponse.json(
         { error: "Unable to reset the round." },
         { status: 500 }

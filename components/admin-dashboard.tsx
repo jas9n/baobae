@@ -12,6 +12,11 @@ import type {
 } from "@/lib/types";
 
 type AdminAuthMode = "locked" | "password" | "google";
+type AdminSessionResponse = {
+  authorized: boolean;
+  method: AdminAuthMode | null;
+  email: string | null;
+};
 
 async function readJson<T>(input: RequestInfo, init?: RequestInit) {
   const response = await fetch(input, init);
@@ -47,6 +52,26 @@ export function AdminDashboard() {
     }
   }
 
+  async function refreshAdminSession(sessionAccessToken: string | null) {
+    try {
+      const data = await readJson<AdminSessionResponse>("/api/admin/session", {
+        cache: "no-store",
+        headers: sessionAccessToken
+          ? {
+              Authorization: `Bearer ${sessionAccessToken}`
+            }
+          : undefined
+      });
+
+      setAuthMode(
+        data.authorized && data.method ? data.method : "locked"
+      );
+    } catch (error) {
+      console.error(error);
+      setAuthMode("locked");
+    }
+  }
+
   async function refreshAdminResults() {
     if (authMode === "locked") {
       setResults(null);
@@ -66,14 +91,17 @@ export function AdminDashboard() {
       setStatusMessage(null);
     } catch (error) {
       console.error(error);
+      if (error instanceof Error && error.message.includes("Unauthorized")) {
+        setAuthMode("locked");
+        setResults(null);
+        return;
+      }
+
       setStatusMessage(
         error instanceof Error
           ? error.message
           : "The admin panel could not load live totals."
       );
-      if (error instanceof Error && error.message.includes("Unauthorized")) {
-        setAuthMode("locked");
-      }
     }
   }
 
@@ -100,7 +128,7 @@ export function AdminDashboard() {
       }
 
       setAccessToken(session?.access_token ?? null);
-      setAuthMode(session?.access_token ? "google" : "locked");
+      await refreshAdminSession(session?.access_token ?? null);
       await refreshPublicState();
     }
 
@@ -110,13 +138,12 @@ export function AdminDashboard() {
       data: { subscription }
     } = client.auth.onAuthStateChange((_event, session) => {
       setAccessToken(session?.access_token ?? null);
-      setAuthMode((previous) =>
-        previous === "password"
-          ? "password"
-          : session?.access_token
-            ? "google"
-            : "locked"
-      );
+      if (session?.access_token) {
+        void refreshAdminSession(session.access_token);
+        return;
+      }
+
+      setAuthMode((previous) => (previous === "password" ? "password" : "locked"));
     });
 
     return () => {
@@ -128,6 +155,7 @@ export function AdminDashboard() {
   usePolling(() => refreshPublicState(), 5000, true);
   usePolling(() => refreshAdminResults(), 1500, authMode !== "locked");
 
+  const currentPhase = eventData?.state.phase_mode ?? "closed";
   const scoreboard =
     results?.contestants
       .map((contestant) => ({
@@ -139,8 +167,14 @@ export function AdminDashboard() {
       .sort((left, right) => right.votes - left.votes) ?? [];
 
   const liveLeader = scoreboard[0] ?? null;
-  const openContestants =
-    eventData?.contestants.filter((contestant) => contestant.is_selectable) ?? [];
+  const aliveContestants =
+    eventData?.contestants.filter(
+      (contestant) => contestant.is_selectable && !contestant.is_eliminated
+    ) ?? [];
+  const eliminatedContestants =
+    eventData?.contestants.filter((contestant) => contestant.is_eliminated) ?? [];
+  const eligibleContestants =
+    currentPhase === "revival" ? eliminatedContestants : aliveContestants;
 
   async function withAdminAction(
     label: string,
@@ -229,12 +263,11 @@ export function AdminDashboard() {
     });
   }
 
-  async function updateContestant(
+  async function updateContestantState(
     contestantId: string,
-    field: "isSelectable" | "isEliminated",
-    value: boolean
+    nextState: "alive" | "eliminated"
   ) {
-    await withAdminAction(`contestant-${contestantId}-${field}`, async () => {
+    await withAdminAction(`contestant-${contestantId}-${nextState}`, async () => {
       await readJson<{ success: true }>("/api/admin/contestants", {
         method: "POST",
         headers: {
@@ -244,7 +277,8 @@ export function AdminDashboard() {
         body: JSON.stringify({
           accessToken,
           contestantId,
-          [field]: value
+          isSelectable: nextState === "alive",
+          isEliminated: nextState === "eliminated"
         })
       });
     });
@@ -294,8 +328,8 @@ export function AdminDashboard() {
           </h1>
         </div>
         <div className="hero-status">
-          <span className={`status-pill status-${eventData?.state.phase_mode ?? "closed"}`}>
-            {phaseCopy[eventData?.state.phase_mode ?? "closed"].title}
+          <span className={`status-pill status-${currentPhase}`}>
+            {phaseCopy[currentPhase].title}
           </span>
           {eventData ? (
             <div className="event-meta">
@@ -458,10 +492,9 @@ export function AdminDashboard() {
             </button>
           </div>
           <div className="summary-strip">
-            <span>{openContestants.length} contestants currently visible to viewers</span>
+            <span>{eligibleContestants.length} contestants eligible in this phase</span>
             <span>
-              {eventData?.contestants.filter((contestant) => contestant.is_eliminated).length ?? 0}{" "}
-              marked eliminated
+              {aliveContestants.length} alive, {eliminatedContestants.length} eliminated
             </span>
           </div>
         </article>
@@ -470,10 +503,11 @@ export function AdminDashboard() {
           <div className="panel-header">
             <div>
               <p className="eyebrow">Roster Control</p>
-              <h2>Decide who the audience can vote on</h2>
+              <h2>Set each contestant's state</h2>
               <p>
-                Toggle each contestant into the active ballot and manually mark
-                who has already been eliminated.
+                Alive contestants appear during elimination rounds. Eliminated
+                contestants appear during revival rounds. Each contestant can only
+                be in one state at a time.
               </p>
             </div>
           </div>
@@ -483,12 +517,7 @@ export function AdminDashboard() {
                 key={contestant.id}
                 contestant={contestant}
                 disabled={authMode === "locked" || !!loadingAction}
-                onSelectableChange={(value) =>
-                  updateContestant(contestant.id, "isSelectable", value)
-                }
-                onEliminatedChange={(value) =>
-                  updateContestant(contestant.id, "isEliminated", value)
-                }
+                onStateChange={(value) => updateContestantState(contestant.id, value)}
               />
             )) ?? <p className="muted-text">Loading contestants...</p>}
           </div>
@@ -522,14 +551,15 @@ export function AdminDashboard() {
 function ContestantRow({
   contestant,
   disabled,
-  onSelectableChange,
-  onEliminatedChange
+  onStateChange
 }: {
   contestant: Contestant;
   disabled: boolean;
-  onSelectableChange: (value: boolean) => void;
-  onEliminatedChange: (value: boolean) => void;
+  onStateChange: (value: "alive" | "eliminated") => void;
 }) {
+  const isAlive = contestant.is_selectable && !contestant.is_eliminated;
+  const isEliminated = contestant.is_eliminated;
+
   return (
     <div className="contestant-row">
       <div className="contestant-row-copy">
@@ -539,18 +569,26 @@ function ContestantRow({
       <label className="toggle-pill">
         <input
           type="checkbox"
-          checked={contestant.is_selectable}
+          checked={isAlive}
           disabled={disabled}
-          onChange={(event) => onSelectableChange(event.target.checked)}
+          onChange={(event) => {
+            if (event.target.checked) {
+              onStateChange("alive");
+            }
+          }}
         />
-        <span>On ballot</span>
+        <span>Alive</span>
       </label>
       <label className="toggle-pill">
         <input
           type="checkbox"
-          checked={contestant.is_eliminated}
+          checked={isEliminated}
           disabled={disabled}
-          onChange={(event) => onEliminatedChange(event.target.checked)}
+          onChange={(event) => {
+            if (event.target.checked) {
+              onStateChange("eliminated");
+            }
+          }}
         />
         <span>Eliminated</span>
       </label>
